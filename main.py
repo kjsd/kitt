@@ -41,25 +41,21 @@ def connect_wifi():
     cyberpi.led.on(0, 50, 0)
     time.sleep(1)
 
-# ==========================================
-# Proxyへ送信する関数
-# ==========================================
-def send_to_agent(text):
+def talk(text):
     if not text:
         return {"message": "No Text"}
 
 
-    # 辞書作成
-    data_dict = {"text": text}
+    data = {"text": text}
     
     try:
         # 日本語対応のためバイト列変換
-        json_str = json.dumps(data_dict)
+        json_str = json.dumps(data)
         json_bytes = json_str.encode('utf-8')
         headers = {'Content-Type': 'application/json; charset=utf-8'}
 
         # 送信
-        res = urequests.post(AGENT_URL, headers=headers, data=json_bytes)
+        res = urequests.post(AGENT_URL + "/talk", headers=headers, data=json_bytes)
         
         if res.status_code == 200:
             ret = res.json()
@@ -101,19 +97,18 @@ while True:
         if user_voice_text:
             led_t = 1
             print("Recognized:", user_voice_text) # PCログ用
-            #cyberpi.console.println("You: " + user_voice_text)
+            cyberpi.console.println("You: " + user_voice_text)
             
-            res = send_to_agent(user_voice_text)
-            message = res.get("message", "No reply")
-            replies = message.split('\n')
+            res = talk(user_voice_text)
+            replies = res.get("message", "No reply").split('\n')
             
             led_t = 3
-            for msg in replies:
+            for x in replies:
                 cyberpi.console.clear()
-                cyberpi.console.println(msg)
-                enmsg = cyberpi.cloud.translate("english", msg)
+                cyberpi.console.println(x)
+                en = cyberpi.cloud.translate("english", x)
             
-                cyberpi.cloud.tts("zh", enmsg)
+                cyberpi.cloud.tts("zh", en)
         else:
             cyberpi.console.print(".")
         
