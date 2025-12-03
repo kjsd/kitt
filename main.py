@@ -97,6 +97,7 @@ while True:
         if user_voice_text:
             led_t = 1
             print("Recognized:", user_voice_text) # PCログ用
+            cyberpi.console.clear()
             cyberpi.console.println("You: " + user_voice_text)
             
             res = talk(user_voice_text)
