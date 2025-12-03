@@ -44,9 +44,9 @@ def connect_wifi():
 # ==========================================
 # Proxyへ送信する関数
 # ==========================================
-def send_to_proxy(text):
+def send_to_agent(text):
     if not text:
-        return "No Text"
+        return {"message": "No Text"}
 
 
     # 辞書作成
@@ -63,17 +63,16 @@ def send_to_proxy(text):
         
         if res.status_code == 200:
             ret = res.json()
-            reply = ret.get("reply", "No reply")
-            return reply
+            return ret
         else:
             print(res.text)
-            return "Err: " + str(res.status_code)
+            return {"message": "Err: " + str(res.status_code)}
             
         res.close()
         
     except Exception as e:
         print("Proxy Error:", e)
-        return "Conn Fail"
+        return {"message": "Conn Fail"}
 
 # ==========================================
 # メイン処理
@@ -104,19 +103,17 @@ while True:
             print("Recognized:", user_voice_text) # PCログ用
             #cyberpi.console.println("You: " + user_voice_text)
             
-            # 3. AIへ送信
-            ai_reply = send_to_proxy(user_voice_text)
-            
-            
-            # 4. AIの返答を表示
-            cyberpi.console.clear()
-            cyberpi.console.println(ai_reply.replace("\n", ""))
-            print(ai_reply)
-
-            enstr = cyberpi.cloud.translate("english", ai_reply)
+            res = send_to_agent(user_voice_text)
+            message = res.get("message", "No reply")
+            replies = message.split('\n')
             
             led_t = 3
-            cyberpi.cloud.tts("zh", enstr)
+            cyberpi.console.clear()
+            for msg in replies:
+                cyberpi.console.println(msg)
+                enmsg = cyberpi.cloud.translate("english", msg)
+            
+                cyberpi.cloud.tts("zh", enmsg)
         else:
             cyberpi.console.print(".")
         
