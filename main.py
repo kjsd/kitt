@@ -108,8 +108,8 @@ while True:
             replies = message.split('\n')
             
             led_t = 3
-            cyberpi.console.clear()
             for msg in replies:
+                cyberpi.console.clear()
                 cyberpi.console.println(msg)
                 enmsg = cyberpi.cloud.translate("english", msg)
             
