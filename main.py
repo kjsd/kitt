@@ -42,6 +42,7 @@ def connect_wifi():
     time.sleep(1)
 
 def talk(text):
+    global ID
     if not text:
         return {"message": "No Text"}
 
@@ -55,7 +56,8 @@ def talk(text):
         headers = {'Content-Type': 'application/json; charset=utf-8'}
 
         # 送信
-        res = urequests.post(AGENT_URL + "/talk", headers=headers, data=json_bytes)
+        url = AGENT_URL + "/" + ID + "/talk"
+        res = urequests.post(url, headers=headers, data=json_bytes)
         
         if res.status_code == 200:
             ret = res.json()
