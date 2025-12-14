@@ -89,6 +89,7 @@ def connect_wifi():
     
     cyberpi.wifi.connect(WIFI_SSID, WIFI_PASS)
     while not cyberpi.wifi.is_connected():
+        cyberpi.console.print(".")
         time.sleep(1)
         
     cyberpi.console.println("OK!")
