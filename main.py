@@ -6,6 +6,11 @@ import time
 import _thread
 import gc
 
+WIFI_SSID = "Your WiFi SSID"
+WIFI_PASS = "Your Wifi passwd"
+AGENT_URL = "kitt_agent server URL"
+ID = "ID of this device provided by kitt_agent"
+
 cyberpi.speech.set_recognition_address(url = "{NAVIGATEURL}")
 cyberpi.speech.set_access_token(token = "{ACCESSTOKEN}")
 cyberpi.driver.cloud_translate.TRANS_URL = "{TRANSURL}"
