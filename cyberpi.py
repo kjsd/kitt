@@ -11,13 +11,6 @@ WIFI_PASS = "Your Wifi passwd"
 AGENT_URL = "kitt_agent server URL"
 ID = "ID of this device provided by kitt_agent"
 
-cyberpi.speech.set_recognition_address(url = "{NAVIGATEURL}")
-cyberpi.speech.set_access_token(token = "{ACCESSTOKEN}")
-cyberpi.driver.cloud_translate.TRANS_URL = "{TRANSURL}"
-cyberpi.driver.cloud_translate.set_token("{ACCESSTOKEN}")
-cyberpi.driver.cloud_translate.TTS_URL = "{TTSURL}"
-cyberpi.driver.cloud_translate.set_token("{ACCESSTOKEN}")
-
 led_t = None
 
 def get_led_req():
@@ -32,7 +25,16 @@ def change_led(x):
 # ==========================================
 @event.start
 def on_start():
+    cyberpi.led.on(50, 0, 0)
     cyberpi.console.clear()
+
+    cyberpi.speech.set_recognition_address(url = "{NAVIGATEURL}")
+    cyberpi.speech.set_access_token(token = "{ACCESSTOKEN}")
+    cyberpi.driver.cloud_translate.TRANS_URL = "{TRANSURL}"
+    cyberpi.driver.cloud_translate.set_token("{ACCESSTOKEN}")
+    cyberpi.driver.cloud_translate.TTS_URL = "{TTSURL}"
+    cyberpi.driver.cloud_translate.set_token("{ACCESSTOKEN}")
+
     connect_wifi()
 
     cyberpi.led.on(0, 0, 50) # 青色
@@ -48,9 +50,11 @@ def on_start():
 # Bボタンで音声認識開始
 @event.is_press('b')
 def exec_talk():
-    gc.collect()
+    cyberpi.console.clear()
+    cyberpi.console.println("Listening...")
     change_led('meteor_blue')
         
+    gc.collect()
     try:
         cyberpi.cloud.listen('japanese', 5)
         user_voice_text = cyberpi.cloud.listen_result()
@@ -85,7 +89,6 @@ def exec_talk():
 # ==========================================
 def connect_wifi():
     cyberpi.console.print("Wi-Fi...")
-    cyberpi.led.on(50, 0, 0)
     
     cyberpi.wifi.connect(WIFI_SSID, WIFI_PASS)
     while not cyberpi.wifi.is_connected():
@@ -93,12 +96,10 @@ def connect_wifi():
         time.sleep(1)
         
     cyberpi.console.println("OK!")
-    cyberpi.led.on(0, 50, 0)
 
 def talk(text):
     if not text:
         return {"message": "No Text"}
-
 
     data = {"text": text}
     
