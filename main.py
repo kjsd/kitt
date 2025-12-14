@@ -1,6 +1,7 @@
 import cyberpi
 import urequests
 import json
+import event
 import time
 import _thread
 import gc
@@ -12,17 +13,23 @@ cyberpi.driver.cloud_translate.set_token("{ACCESSTOKEN}")
 cyberpi.driver.cloud_translate.TTS_URL = "{TTSURL}"
 cyberpi.driver.cloud_translate.set_token("{ACCESSTOKEN}")
 
-led_t = 0
+led_t = None
 
-def led_task():
+# ==========================================
+# メイン処理
+# ==========================================
+@event.start
+def on_start():
     global led_t
+    cyberpi.console.clear()
+    connect_wifi()
+
+    cyberpi.led.on(0, 0, 50) # 青色
+    cyberpi.console.println("Press B to Speak")
+
     while True:
-        if led_t == 1:
-            cyberpi.led.play('rainbow')
-        elif led_t == 2:
-            cyberpi.led.play('meteor_blue')
-        elif led_t == 3:
-            cyberpi.led.play('meteor_green')
+        if led_t:
+            cyberpi.led.play(led_t)
 
         time.sleep(0.1)
 
@@ -39,7 +46,6 @@ def connect_wifi():
         
     cyberpi.console.println("OK!")
     cyberpi.led.on(0, 50, 0)
-    time.sleep(1)
 
 def talk(text):
     global ID
@@ -72,48 +78,38 @@ def talk(text):
         print("Proxy Error:", e)
         return {"message": "Conn Fail"}
 
-# ==========================================
-# メイン処理
-# ==========================================
-cyberpi.console.clear()
-connect_wifi()
-
-cyberpi.console.println("Press B to Speak")
-
-_thread.start_new_thread(led_task, ())
-
-while True:
-    cyberpi.led.on(0, 0, 50) # 青色
-    # Bボタンで音声認識開始
-    if cyberpi.controller.is_press('b'):
-        gc.collect()
-        led_t = 2
+# Bボタンで音声認識開始
+@event.is_press('b')
+def exec_talk():
+    global led_t
+    gc.collect()
+    led_t = 'meteor_blue'
         
-        try:
-            cyberpi.cloud.listen('japanese', 5)
-            user_voice_text = cyberpi.cloud.listen_result()
-        except:
-            user_voice_text = ""
-    
-        # 2. 結果の確認
-        if user_voice_text:
-            led_t = 1
-            print("Recognized:", user_voice_text) # PCログ用
+    try:
+        cyberpi.cloud.listen('japanese', 5)
+        user_voice_text = cyberpi.cloud.listen_result()
+    except:
+        user_voice_text = ""
+            
+    # 2. 結果の確認
+    if user_voice_text:
+        led_t = 'rainbow'
+        print("Recognized:", user_voice_text) # PCログ用
+        cyberpi.console.clear()
+        cyberpi.console.println("You: " + user_voice_text)
+            
+        res = talk(user_voice_text)
+        replies = res.get("message", "No reply").split('\n')
+            
+        led_t = 'meteor_green'
+        for x in replies:
             cyberpi.console.clear()
-            cyberpi.console.println("You: " + user_voice_text)
+            cyberpi.console.println(x)
+            en = cyberpi.cloud.translate("english", x)
             
-            res = talk(user_voice_text)
-            replies = res.get("message", "No reply").split('\n')
-            
-            led_t = 3
-            for x in replies:
-                cyberpi.console.clear()
-                cyberpi.console.println(x)
-                en = cyberpi.cloud.translate("english", x)
-            
-                cyberpi.cloud.tts("zh", en)
-        else:
-            cyberpi.console.print(".")
+            cyberpi.cloud.tts("zh", en)
+    else:
+        cyberpi.console.print(".")
         
-        led_t = 0
-        time.sleep(1)
+    led_t = None
+    cyberpi.led.on(0, 0, 50) # 青色
