@@ -11,22 +11,42 @@ WIFI_PASS = "Your Wifi passwd"
 AGENT_URL = "kitt_agent server URL"
 ID = "ID of this device provided by kitt_agent"
 
-led_t = None
+NOT_READY = None
+READY = 1
+LISTENING = 2
+THINKING = 3
+PLAYING = 4
 
-def get_led_req():
+led_t = NOT_READY
+
+def state():
     global led_t
     return led_t
-def change_led(x):
+def fired(x):
     global led_t
     led_t = x
-
+def state_loop():
+    while True:
+        x = state()
+        if x == READY:
+            cyberpi.led.on(0, 0, 50) # 青色
+        elif x == LISTENING:
+            cyberpi.led.play('meteor_blue')
+        elif x == THINKING:
+            cyberpi.led.play('rainbow')
+        elif x == PLAYING:
+            cyberpi.led.play('meteor_green')
+        else:
+            cyberpi.led.on(50, 0, 0)
+        time.sleep(0.1)
+    
 # ==========================================
 # メイン処理
 # ==========================================
 @event.start
 def on_start():
-    cyberpi.led.on(50, 0, 0)
     cyberpi.console.clear()
+    fired(NOT_READY)
 
     cyberpi.speech.set_recognition_address(url = "{NAVIGATEURL}")
     cyberpi.speech.set_access_token(token = "{ACCESSTOKEN}")
@@ -37,22 +57,17 @@ def on_start():
 
     connect_wifi()
 
-    cyberpi.led.on(0, 0, 50) # 青色
+    fired(READY)
     cyberpi.console.println("Press B to Speak")
 
-    while True:
-        x = get_led_req()
-        if x:
-            cyberpi.led.play(x)
-
-        time.sleep(0.1)
+    state_loop()
 
 # Bボタンで音声認識開始
 @event.is_press('b')
 def exec_talk():
     cyberpi.console.clear()
     cyberpi.console.println("Listening...")
-    change_led('meteor_blue')
+    fired(LISTENING)
         
     gc.collect()
     try:
@@ -63,7 +78,7 @@ def exec_talk():
             
     # 2. 結果の確認
     if user_voice_text:
-        change_led('rainbow')
+        fired(THINKING)
         print("Recognized:", user_voice_text) # PCログ用
         cyberpi.console.clear()
         cyberpi.console.println("You: " + user_voice_text)
@@ -71,7 +86,7 @@ def exec_talk():
         res = talk(user_voice_text)
         replies = res.get("message", "No reply").split('\n')
             
-        change_led('meteor_green')
+        fired(PLAYING)
         for x in replies:
             cyberpi.console.clear()
             cyberpi.console.println(x)
@@ -81,8 +96,7 @@ def exec_talk():
     else:
         cyberpi.console.print(".")
         
-    change_led(None)
-    cyberpi.led.on(0, 0, 50) # 青色
+    fired(READY)
 
 # ==========================================
 # Wi-Fi接続
