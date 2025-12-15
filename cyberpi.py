@@ -65,9 +65,12 @@ def on_start():
 # Bボタンで音声認識開始
 @event.is_press('b')
 def exec_talk():
+    if state() != READY:
+        return
+    fired(LISTENING)
+    
     cyberpi.console.clear()
     cyberpi.console.println("Listening...")
-    fired(LISTENING)
         
     gc.collect()
     try:
@@ -84,15 +87,16 @@ def exec_talk():
         cyberpi.console.println("You: " + user_voice_text)
             
         res = talk(user_voice_text)
-        replies = res.get("message", "No reply").split('\n')
+        if res:
+            replies = res.split('\n')
             
-        fired(PLAYING)
-        for x in replies:
-            cyberpi.console.clear()
-            cyberpi.console.println(x)
-            en = cyberpi.cloud.translate("english", x)
+            fired(PLAYING)
+            for x in replies:
+                cyberpi.console.clear()
+                cyberpi.console.println(x)
+                en = cyberpi.cloud.translate("english", x)
             
-            cyberpi.cloud.tts("zh", en)
+                cyberpi.cloud.tts("zh", en)
     else:
         cyberpi.console.print(".")
         
@@ -113,7 +117,7 @@ def connect_wifi():
 
 def talk(text):
     if not text:
-        return {"message": "No Text"}
+        return None
 
     data = {"text": text}
     
@@ -129,14 +133,15 @@ def talk(text):
         
         if res.status_code == 200:
             ret = res.json()
-            return ret
+            return ret.get("message", None)
         else:
             print(res.text)
-            return {"message": "Err: " + str(res.status_code)}
+            cyberpi.console.println("Err: " + str(res.status_code))
+            return None
             
         res.close()
         
     except Exception as e:
         print("Proxy Error:", e)
-        return {"message": "Conn Fail"}
-
+        cyberpi.console.println(e)
+        return None
