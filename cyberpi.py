@@ -1,4 +1,5 @@
 import cyberpi
+import mbot2
 import urequests
 import json
 import event
@@ -115,18 +116,36 @@ def exec(content):
 
 def hdl_move_forward(param, unit):
     cyberpi.console.println("MoveFoward: " + str(param) + str(unit))
+    if unit == "s":
+        mbot2.forward(50, param)
+    elif unit == "cm":
+        mbot2.straight(param)
+        
 
 def hdl_move_backward(param, unit):
     cyberpi.console.println("MoveBackard: " + str(param) + str(unit))
+    if unit == "s":
+        mbot2.backward(50, param)
+    elif unit == "cm":
+        mbot2.straight(-param)
 
 def hdl_turn_left(param, unit):
     cyberpi.console.println("TurnLeft: " + str(param) + str(unit))
+    if unit == "s":
+        mbot2.turn_left(50, param)
+    elif unit == "deg":
+        mbot2.turn(-param)
 
 def hdl_turn_right(param, unit):
     cyberpi.console.println("TurnRight: " + str(param) + str(unit))
+    if unit == "s":
+        mbot2.turn_right(50, param)
+    elif unit == "deg":
+        mbot2.turn(param)
 
 def hdl_stop():
     cyberpi.console.println("Stop")
+    mbot2.EM_stop("ALL")
 
 def get_content():
     fired(THINKING)
