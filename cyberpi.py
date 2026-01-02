@@ -4,6 +4,7 @@ import urequests
 import json
 import event
 import time
+import random
 import _thread
 import gc
 
@@ -31,9 +32,9 @@ def led_task():
         if x == READY:
             cyberpi.led.on(0, 0, 50) # 青色
         elif x == THINKING:
-            cyberpi.led.play('rainbow')
+            cyberpi.led.play("rainbow")
         elif x == PLAYING:
-            cyberpi.led.play('meteor_blue')
+            cyberpi.led.play("meteor_blue")
         else:
             cyberpi.led.on(50, 0, 0)
         time.sleep(0.1)
@@ -53,99 +54,51 @@ def on_start():
     while True:
         fired(READY)
         content = get_content()
-        exec(content)
-        complete(content)
+        res = process(content)
+        result(content, res)
 
         time.sleep(0.1)
 
-def exec(content):
-    if not content: return
+def process(content):
+    if not content: return False
 
     fired(PLAYING)
     actions = content.get("system_actions", [])
+    res = True
     
+    # 実行用の基本環境（サンドボックス）
+    base_env = {
+        "mbot2": mbot2,
+        "cyberpi": cyberpi,
+        "time": time,
+        "event": event,
+        "urequests": urequests,
+        "json": json,
+        "random": random
+    }
+
     for x in actions:
-        action = x.get("action")
-        param = x.get("parameter")
-        p = None
-        u = None
-        
-        if action == "MoveForward":
-            if param.endswith("s"):
-                p = float(param.replace("s", ""))
-                u = "s"
-            elif param.endswith("cm"):
-                p = float(param.replace("cm", ""))
-                u = "cm"
-
-            hdl_move_forward(p, u)
+        if x["action"] == "ExecuteCode":
+            cyberpi.console.println(x["parameter"])
+            gc.collect() # 実行前GC
             
-        elif action == "MoveBackward":
-            if param.endswith("s"):
-                p = float(param.replace("s", ""))
-                u = "s"
-            elif param.endswith("cm"):
-                p = float(param.replace("cm", "")) 
-                u = "s"
+            # アクションごとに環境をコピーして汚染を防ぐ
+            exec_env = base_env.copy()
+            
+            try:
+                exec(x["parameter"], exec_env, exec_env)
+            except Exception as e:
+                print("Execution error:", e)
+                cyberpi.console.println(e)
+                res = False
+            
+            # メモリ解放
+            exec_env = None
+            gc.collect() 
+        else:
+            res = False
 
-            hdl_move_backward(p, u)
-        
-        elif action == "TurnLeft":
-            if param.endswith("s"):
-                p = float(param.replace("s", "")) 
-                u = "s"
-            elif param.endswith("deg"):
-                p = float(param.replace("deg", "")) 
-                u = "deg"
-
-            hdl_turn_left(p, u)
-        
-        elif action == "TurnRight":
-            if param.endswith("s"):
-                p = float(param.replace("s", "")) 
-                u = "s"
-            elif param.endswith("deg"):
-                p = float(param.replace("deg", "")) 
-                u = "deg"
-
-            hdl_turn_right(p, u)
-        
-        elif action == "Stop":
-            hdl_stop()
-
-
-def hdl_move_forward(param, unit):
-    cyberpi.console.println("MoveFoward: " + str(param) + str(unit))
-    if unit == "s":
-        mbot2.forward(50, param)
-    elif unit == "cm":
-        mbot2.straight(param)
-        
-
-def hdl_move_backward(param, unit):
-    cyberpi.console.println("MoveBackard: " + str(param) + str(unit))
-    if unit == "s":
-        mbot2.backward(50, param)
-    elif unit == "cm":
-        mbot2.straight(-param)
-
-def hdl_turn_left(param, unit):
-    cyberpi.console.println("TurnLeft: " + str(param) + str(unit))
-    if unit == "s":
-        mbot2.turn_left(50, param)
-    elif unit == "deg":
-        mbot2.turn(-param)
-
-def hdl_turn_right(param, unit):
-    cyberpi.console.println("TurnRight: " + str(param) + str(unit))
-    if unit == "s":
-        mbot2.turn_right(50, param)
-    elif unit == "deg":
-        mbot2.turn(param)
-
-def hdl_stop():
-    cyberpi.console.println("Stop")
-    mbot2.EM_stop("ALL")
+    return res
 
 def get_content():
     fired(THINKING)
@@ -172,14 +125,18 @@ def get_content():
         time.sleep(1)
         return None
 
-def complete(content):
+def result(content, success=True):
     if not content: return
 
     try:
-        headers = {'Content-Type': 'application/json; charset=utf-8'}
+        headers = {"Content-Type": "application/json; charset=utf-8"}
 
-        # 送信
-        url = AGENT_URL + "/" + ID + "/actions/" + str(content["id"]) + "/complete"
+        if success:
+            ep = "/complete"
+        else:
+            ep = "/fail"
+
+        url = AGENT_URL + "/" + ID + "/actions/" + str(content["id"]) + ep
         res = urequests.post(url, headers=headers)
         
         if res.status_code == 200:
