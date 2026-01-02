@@ -60,6 +60,7 @@ def on_start():
 def exec(content):
     if not content: return
 
+    fired(PLAYING)
     actions = content.get("system_actions", [])
     
     for x in actions:
@@ -114,23 +115,18 @@ def exec(content):
 
 def hdl_move_forward(param, unit):
     cyberpi.console.println("MoveFoward: " + str(param) + str(unit))
-    fired(PLAYING)
 
 def hdl_move_backward(param, unit):
     cyberpi.console.println("MoveBackard: " + str(param) + str(unit))
-    fired(PLAYING)
 
 def hdl_turn_left(param, unit):
     cyberpi.console.println("TurnLeft: " + str(param) + str(unit))
-    fired(PLAYING)
 
 def hdl_turn_right(param, unit):
     cyberpi.console.println("TurnRight: " + str(param) + str(unit))
-    fired(PLAYING)
 
 def hdl_stop():
     cyberpi.console.println("Stop")
-    fired(PLAYING)
 
 def get_content():
     fired(THINKING)
