@@ -13,9 +13,8 @@ ID = "ID of this device provided by kitt_agent"
 
 NOT_READY = None
 READY = 1
-LISTENING = 2
-THINKING = 3
-PLAYING = 4
+THINKING = 2
+PLAYING = 3
 
 led_t = NOT_READY
 
@@ -25,17 +24,15 @@ def state():
 def fired(x):
     global led_t
     led_t = x
-def state_loop():
+def led_task():
     while True:
         x = state()
         if x == READY:
             cyberpi.led.on(0, 0, 50) # 青色
-        elif x == LISTENING:
-            cyberpi.led.play('meteor_blue')
         elif x == THINKING:
             cyberpi.led.play('rainbow')
         elif x == PLAYING:
-            cyberpi.led.play('meteor_green')
+            cyberpi.led.play('meteor_blue')
         else:
             cyberpi.led.on(50, 0, 0)
         time.sleep(0.1)
@@ -46,61 +43,145 @@ def state_loop():
 @event.start
 def on_start():
     cyberpi.console.clear()
+    _thread.start_new_thread(led_task, ())
     fired(NOT_READY)
 
-    cyberpi.speech.set_recognition_address(url = "{NAVIGATEURL}")
-    cyberpi.speech.set_access_token(token = "{ACCESSTOKEN}")
-    cyberpi.driver.cloud_translate.TRANS_URL = "{TRANSURL}"
-    cyberpi.driver.cloud_translate.set_token("{ACCESSTOKEN}")
-    cyberpi.driver.cloud_translate.TTS_URL = "{TTSURL}"
-    cyberpi.driver.cloud_translate.set_token("{ACCESSTOKEN}")
-
     connect_wifi()
+    cyberpi.console.println("Ready to action")
 
-    fired(READY)
-    cyberpi.console.println("Press B to Speak")
+    while True:
+        fired(READY)
+        content = get_content()
+        exec(content)
+        complete(content)
 
-    state_loop()
+        time.sleep(0.1)
 
-# Bボタンで音声認識開始
-@event.is_press('b')
-def exec_talk():
-    if state() != READY:
-        return
-    fired(LISTENING)
+def exec(content):
+    if not content: return
+
+    actions = content.get("system_actions", [])
     
-    cyberpi.console.clear()
-    cyberpi.console.println("Listening...")
+    for x in actions:
+        action = x.get("action")
+        param = x.get("parameter")
+        p = None
+        u = None
         
-    gc.collect()
+        if action == "MoveForward":
+            if param.endswith("s"):
+                p = float(param.replace("s", ""))
+                u = "s"
+            elif param.endswith("cm"):
+                p = float(param.replace("cm", ""))
+                u = "cm"
+
+            hdl_move_forward(p, u)
+            
+        elif action == "MoveBackward":
+            if param.endswith("s"):
+                p = float(param.replace("s", ""))
+                u = "s"
+            elif param.endswith("cm"):
+                p = float(param.replace("cm", "")) 
+                u = "s"
+
+            hdl_move_backward(p, u)
+        
+        elif action == "TurnLeft":
+            if param.endswith("s"):
+                p = float(param.replace("s", "")) 
+                u = "s"
+            elif param.endswith("deg"):
+                p = float(param.replace("deg", "")) 
+                u = "deg"
+
+            hdl_turn_left(p, u)
+        
+        elif action == "TurnRight":
+            if param.endswith("s"):
+                p = float(param.replace("s", "")) 
+                u = "s"
+            elif param.endswith("deg"):
+                p = float(param.replace("deg", "")) 
+                u = "deg"
+
+            hdl_turn_right(p, u)
+        
+        elif action == "Stop":
+            hdl_stop()
+
+
+def hdl_move_forward(param, unit):
+    cyberpi.console.println("MoveFoward: " + str(param) + str(unit))
+    fired(PLAYING)
+
+def hdl_move_backward(param, unit):
+    cyberpi.console.println("MoveBackard: " + str(param) + str(unit))
+    fired(PLAYING)
+
+def hdl_turn_left(param, unit):
+    cyberpi.console.println("TurnLeft: " + str(param) + str(unit))
+    fired(PLAYING)
+
+def hdl_turn_right(param, unit):
+    cyberpi.console.println("TurnRight: " + str(param) + str(unit))
+    fired(PLAYING)
+
+def hdl_stop():
+    cyberpi.console.println("Stop")
+    fired(PLAYING)
+
+def get_content():
+    fired(THINKING)
+
     try:
-        cyberpi.cloud.listen('japanese', 5)
-        user_voice_text = cyberpi.cloud.listen_result()
-    except:
-        user_voice_text = ""
-            
-    # 2. 結果の確認
-    if user_voice_text:
-        fired(THINKING)
-        print("Recognized:", user_voice_text) # PCログ用
-        cyberpi.console.clear()
-        cyberpi.console.println("You: " + user_voice_text)
-            
-        res = talk(user_voice_text)
-        if res:
-            replies = res.split('\n')
-            
-            fired(PLAYING)
-            for x in replies:
-                cyberpi.console.clear()
-                cyberpi.console.println(x)
-                en = cyberpi.cloud.translate("english", x)
-            
-                cyberpi.cloud.tts("zh", en)
-    else:
-        cyberpi.console.print(".")
+        # 送信
+        url = AGENT_URL + "/" + ID + "/actions/pending"
+        res = urequests.get(url)
         
-    fired(READY)
+        if res.status_code == 200:
+            return res.json()
+        else:
+            print(res.text)
+            #cyberpi.console.println("Err: " + str(res.status_code))
+            time.sleep(1)
+
+            return None
+            
+        res.close()
+        
+    except Exception as e:
+        print("Err: ", e)
+        cyberpi.console.println(e)
+        time.sleep(1)
+        return None
+
+def complete(content):
+    if not content: return
+
+    try:
+        headers = {'Content-Type': 'application/json; charset=utf-8'}
+
+        # 送信
+        url = AGENT_URL + "/" + ID + "/actions/" + str(content["id"]) + "/complete"
+        res = urequests.post(url, headers=headers)
+        
+        if res.status_code == 200:
+            return res.json()
+        else:
+            print(res.text)
+            cyberpi.console.println("Err: " + str(res.status_code))
+            time.sleep(1)
+            return None
+            
+        res.close()
+        
+    except Exception as e:
+        print("Err: ", e)
+        cyberpi.console.println(e)
+        time.sleep(1)
+        return None
 
 # ==========================================
 # Wi-Fi接続
@@ -114,34 +195,3 @@ def connect_wifi():
         time.sleep(1)
         
     cyberpi.console.println("OK!")
-
-def talk(text):
-    if not text:
-        return None
-
-    data = {"text": text}
-    
-    try:
-        # 日本語対応のためバイト列変換
-        json_str = json.dumps(data)
-        json_bytes = json_str.encode('utf-8')
-        headers = {'Content-Type': 'application/json; charset=utf-8'}
-
-        # 送信
-        url = AGENT_URL + "/" + ID + "/talk"
-        res = urequests.post(url, headers=headers, data=json_bytes)
-        
-        if res.status_code == 200:
-            ret = res.json()
-            return ret.get("message", None)
-        else:
-            print(res.text)
-            cyberpi.console.println("Err: " + str(res.status_code))
-            return None
-            
-        res.close()
-        
-    except Exception as e:
-        print("Proxy Error:", e)
-        cyberpi.console.println(e)
-        return None
