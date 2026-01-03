@@ -1,11 +1,11 @@
 import cyberpi
 import mbot2
+import mbuild
 import urequests
 import json
 import event
 import time
 import random
-import _thread
 import gc
 
 WIFI_SSID = "Your WiFi SSID"
@@ -13,46 +13,17 @@ WIFI_PASS = "Your Wifi passwd"
 AGENT_URL = "kitt_agent server URL"
 ID = "ID of this device provided by kitt_agent"
 
-NOT_READY = None
-READY = 1
-THINKING = 2
-PLAYING = 3
-
-led_t = NOT_READY
-
-def state():
-    global led_t
-    return led_t
-def fired(x):
-    global led_t
-    led_t = x
-def led_task():
-    while True:
-        x = state()
-        if x == READY:
-            cyberpi.led.on(0, 0, 50) # 青色
-        elif x == THINKING:
-            cyberpi.led.play("rainbow")
-        elif x == PLAYING:
-            cyberpi.led.play("meteor_blue")
-        else:
-            cyberpi.led.on(50, 0, 0)
-        time.sleep(0.1)
-    
 # ==========================================
 # メイン処理
 # ==========================================
 @event.start
 def on_start():
     cyberpi.console.clear()
-    _thread.start_new_thread(led_task, ())
-    fired(NOT_READY)
+    cyberpi.led.off('all')
 
     connect_wifi()
-    cyberpi.console.println("Ready to action")
 
     while True:
-        fired(READY)
         content = get_content()
         res = process(content)
         result(content, res)
@@ -61,48 +32,40 @@ def on_start():
 
 def process(content):
     if not content: return False
+    if content["action"] != "SystemAction": return False
 
-    fired(PLAYING)
-    actions = content.get("system_actions", [])
-    res = True
-    
     # 実行用の基本環境（サンドボックス）
     base_env = {
         "mbot2": mbot2,
+        "mbuild": mbuild,
         "cyberpi": cyberpi,
         "time": time,
-        "event": event,
         "urequests": urequests,
         "json": json,
         "random": random
     }
 
-    for x in actions:
-        if x["action"] == "ExecuteCode":
-            cyberpi.console.println(x["parameter"])
-            gc.collect() # 実行前GC
+    cyberpi.console.println(content["parameter"])
+    gc.collect() # 実行前GC
             
-            # アクションごとに環境をコピーして汚染を防ぐ
-            exec_env = base_env.copy()
-            
-            try:
-                exec(x["parameter"], exec_env, exec_env)
-            except Exception as e:
-                print("Execution error:", e)
-                cyberpi.console.println(e)
-                res = False
-            
-            # メモリ解放
-            exec_env = None
-            gc.collect() 
-        else:
-            res = False
+    # アクションごとに環境をコピーして汚染を防ぐ
+    exec_env = base_env.copy()
+
+    res = True
+    try:
+        exec(content["parameter"], exec_env, exec_env)
+    except Exception as e:
+        print("Execution error:", e)
+        cyberpi.console.println(e)
+        res = False
+                
+    # メモリ解放
+    exec_env = None
+    gc.collect() 
 
     return res
 
 def get_content():
-    fired(THINKING)
-
     try:
         # 送信
         url = AGENT_URL + "/" + ID + "/actions/pending"
