@@ -18,10 +18,10 @@ ID = "ID of this device provided by kitt_agent"
 # ==========================================
 @event.start
 def on_start():
+    connect_wifi()
+
     cyberpi.console.clear()
     cyberpi.led.off('all')
-
-    connect_wifi()
 
     while True:
         content = get_content()
@@ -45,7 +45,6 @@ def process(content):
         "random": random
     }
 
-    cyberpi.console.println(content["parameter"])
     gc.collect() # 実行前GC
             
     # アクションごとに環境をコピーして汚染を防ぐ
