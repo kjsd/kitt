@@ -1,6 +1,6 @@
 # Kitt Client for mBot2
 
-Makeblock mBot2 (CyberPi) 用のクライアントプログラムです。[KittAgent](https://github.com/ditsmod/kitt_agent) の `SystemActions` キューから物理的な動作命令を受け取り、実行します。
+Makeblock mBot2 (CyberPi) 用のクライアントプログラムです。[KittAgent](https://github.com/kjsd/kitt_agent) の `SystemActions` キューから物理的な動作命令を受け取り、実行します。
 
 ## 機能概要
 
