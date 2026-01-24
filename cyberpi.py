@@ -67,7 +67,7 @@ def process(content):
 def get_content():
     try:
         # 送信
-        url = AGENT_URL + "/" + ID + "/actions/pending"
+        url = AGENT_URL + "/kitts/" + ID + "/actions/pending"
         res = urequests.get(url)
         
         if res.status_code == 200:
@@ -98,7 +98,7 @@ def result(content, success=True):
         else:
             ep = "/fail"
 
-        url = AGENT_URL + "/" + ID + "/actions/" + str(content["id"]) + ep
+        url = AGENT_URL + "/kitts/" + ID + "/actions/" + str(content["id"]) + ep
         res = urequests.post(url, headers=headers)
         
         if res.status_code == 200:
