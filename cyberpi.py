@@ -30,38 +30,33 @@ def on_start():
 
         time.sleep(0.1)
 
+# 実行用の基本環境（グローバルで使い回してメモリ節約）
+EXEC_ENV = {
+    "mbot2": mbot2,
+    "mbuild": mbuild,
+    "cyberpi": cyberpi,
+    "time": time,
+    "urequests": urequests,
+    "json": json,
+    "random": random
+}
+
 def process(content):
     if not content: return False
-    if content["action"] != "SystemAction": return False
-
-    # 実行用の基本環境（サンドボックス）
-    base_env = {
-        "mbot2": mbot2,
-        "mbuild": mbuild,
-        "cyberpi": cyberpi,
-        "time": time,
-        "urequests": urequests,
-        "json": json,
-        "random": random
-    }
+    if content.get("action") != "SystemAction": return False
 
     gc.collect() # 実行前GC
             
-    # アクションごとに環境をコピーして汚染を防ぐ
-    exec_env = base_env.copy()
-
     res = True
     try:
-        exec(content["parameter"], exec_env, exec_env)
+        # EXEC_ENVを直接使い回す
+        exec(content["parameter"], EXEC_ENV, EXEC_ENV)
     except Exception as e:
         print("Execution error:", e)
         cyberpi.console.println(e)
         res = False
                 
-    # メモリ解放
-    exec_env = None
-    gc.collect() 
-
+    gc.collect() # 実行後GC
     return res
 
 def get_content():
@@ -73,6 +68,7 @@ def get_content():
         if res.status_code == 200:
             data = res.json()
             res.close()
+            gc.collect() # JSONパース後のゴミ掃除
             return data
         else:
             print(res.text)
@@ -103,6 +99,7 @@ def result(content, success=True):
         if res.status_code == 200:
             data = res.json()
             res.close()
+            gc.collect() # JSONパース後のゴミ掃除
             return data
         else:
             print(res.text)
