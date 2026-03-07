@@ -71,15 +71,14 @@ def get_content():
         res = urequests.get(url)
         
         if res.status_code == 200:
-            return res.json()
+            data = res.json()
+            res.close()
+            return data
         else:
             print(res.text)
-            #cyberpi.console.println("Err: " + str(res.status_code))
+            res.close()
             time.sleep(1)
-
             return None
-            
-        res.close()
         
     except Exception as e:
         print("Err: ", e)
@@ -102,14 +101,14 @@ def result(content, success=True):
         res = urequests.post(url, headers=headers)
         
         if res.status_code == 200:
-            return res.json()
+            data = res.json()
+            res.close()
+            return data
         else:
             print(res.text)
-            cyberpi.console.println("Err: " + str(res.status_code))
+            res.close()
             time.sleep(1)
             return None
-            
-        res.close()
         
     except Exception as e:
         print("Err: ", e)
