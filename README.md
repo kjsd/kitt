@@ -21,8 +21,11 @@ Makeblock mBot2 (CyberPi) 用のクライアントプログラムです。[KittA
 `cyberpi.py` の先頭にある以下の変数を環境に合わせて書き換えてください。
 
 ```python
-WIFI_SSID = "Your WiFi SSID"   # Wi-FiのSSID
-WIFI_PASS = "Your Wifi passwd" # Wi-Fiのパスワード
+WIFI_LIST = [
+    ("Your WiFi SSID 1", "Your Wifi passwd 1"), # 優先度1のWi-Fi
+    ("Your WiFi SSID 2", "Your Wifi passwd 2"), # 優先度2のWi-Fi
+]
+WIFI_TIMEOUT = 10              # 1つのSSIDあたりの接続試行秒数
 AGENT_URL = "http://192.168.1.10:4000/api/devices" # KittAgentサーバーのAPIエンドポイント
 ID = "mbot-01"                 # KittAgent側で登録したこのデバイスのID
 ```

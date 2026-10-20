@@ -8,8 +8,12 @@ import time
 import random
 import gc
 
-WIFI_SSID = "Your WiFi SSID"
-WIFI_PASS = "Your Wifi passwd"
+# 接続先Wi-Fiリスト: (SSID, パスワード) のタプルを優先順に記述
+WIFI_LIST = [
+    ("Your WiFi SSID 1", "Your Wifi passwd 1"),
+    ("Your WiFi SSID 2", "Your Wifi passwd 2"),
+]
+WIFI_TIMEOUT = 10  # 1つのSSIDあたりの接続試行秒数
 AGENT_URL = "kitt_agent server URL"
 ID = "ID of this device provided by kitt_agent"
 
@@ -24,6 +28,9 @@ def on_start():
     cyberpi.led.off('all')
 
     while True:
+        if not cyberpi.wifi.is_connected():
+            connect_wifi()
+
         content = get_content()
         res = process(content)
         result(content, res)
@@ -117,11 +124,16 @@ def result(content, success=True):
 # Wi-Fi接続
 # ==========================================
 def connect_wifi():
-    cyberpi.console.print("Wi-Fi...")
-    
-    cyberpi.wifi.connect(WIFI_SSID, WIFI_PASS)
     while not cyberpi.wifi.is_connected():
-        cyberpi.console.print(".")
-        time.sleep(1)
-        
-    cyberpi.console.println("OK!")
+        for ssid, passwd in WIFI_LIST:
+            cyberpi.console.println("Wi-Fi: " + ssid)
+            cyberpi.wifi.connect(ssid, passwd)
+
+            for _ in range(WIFI_TIMEOUT):
+                if cyberpi.wifi.is_connected():
+                    cyberpi.console.println("OK!")
+                    return
+                cyberpi.console.print(".")
+                time.sleep(1)
+
+            cyberpi.console.println("")
