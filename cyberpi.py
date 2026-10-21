@@ -18,6 +18,52 @@ AGENT_URL = "kitt_agent server URL"
 ID = "ID of this device provided by kitt_agent"
 
 # ==========================================
+# センサー初期化・床キャリブレーション
+# ==========================================
+BG_GRAY = 50  # 床の基準明度 (0-100)
+
+def calibrate_sensors():
+    global BG_GRAY
+    try:
+        # クアッドRGBセンサーの補助LEDを標準の白に初期化
+        mbuild.quad_rgb_sensor.set_led("white", 1)
+        time.sleep(0.2)
+
+        # 起動時に置かれている床のグレースケール明度 (0-100) をサンプリング
+        samples = []
+        for _ in range(5):
+            for ch in ("l1", "r1"):
+                g = mbuild.quad_rgb_sensor.get_gray(ch, 1)
+                if g is not None and g >= 0:
+                    samples.append(g)
+            time.sleep(0.05)
+
+        if samples:
+            avg = sum(samples) // len(samples)
+            # 持ち上げられている場合 (極端に暗い場合) はデフォルト値50を維持
+            BG_GRAY = avg if avg >= 10 else 50
+            EXEC_ENV["BG_GRAY"] = BG_GRAY
+            cyberpi.console.println("BG_GRAY: " + str(BG_GRAY))
+    except Exception as e:
+        print("Sensor init err:", e)
+
+def is_black_line(ch="any", index=1):
+    threshold = min(35, max(10, int(BG_GRAY * 0.65)))
+    channels = ("l2", "l1", "r1", "r2") if ch == "any" else (ch,)
+    for c in channels:
+        if mbuild.quad_rgb_sensor.get_gray(c, index) < threshold:
+            return True
+    return False
+
+def is_white_line(ch="any", index=1):
+    threshold = max(60, min(92, int(BG_GRAY + max(15, (100 - BG_GRAY) * 0.4))))
+    channels = ("l2", "l1", "r1", "r2") if ch == "any" else (ch,)
+    for c in channels:
+        if mbuild.quad_rgb_sensor.get_gray(c, index) > threshold:
+            return True
+    return False
+
+# ==========================================
 # メイン処理
 # ==========================================
 @event.start
@@ -26,6 +72,7 @@ def on_start():
 
     cyberpi.console.clear()
     cyberpi.led.off('all')
+    calibrate_sensors()
 
     while True:
         if not cyberpi.wifi.is_connected():
@@ -45,7 +92,11 @@ EXEC_ENV = {
     "time": time,
     "urequests": urequests,
     "json": json,
-    "random": random
+    "random": random,
+    "BG_GRAY": BG_GRAY,
+    "calibrate_sensors": calibrate_sensors,
+    "is_black_line": is_black_line,
+    "is_white_line": is_white_line
 }
 
 def process(content):
