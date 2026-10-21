@@ -26,7 +26,7 @@ def calibrate_sensors():
     global BG_GRAY
     try:
         # 超音波センサーの青色LEDを一旦消灯し、クアッドRGBセンサーの補助LEDを白に初期化
-        mbuild.ultrasonic2.set_bri(0, 1)
+        mbuild.ultrasonic2.set_bri(0, "all", 1)
         mbuild.quad_rgb_sensor.set_led("white", 1)
         time.sleep(0.2)
 
@@ -71,15 +71,15 @@ def talk_led(sec=3.0):
         for _ in range(steps):
             if stop_requested or is_manual_running:
                 break
-            mbuild.ultrasonic2.set_bri(100, 1)
+            mbuild.ultrasonic2.set_bri(100, "all", 1)
             cyberpi.led.on(255, 0, 0)
             time.sleep(0.13)
             if stop_requested or is_manual_running:
                 break
-            mbuild.ultrasonic2.set_bri(10, 1)
+            mbuild.ultrasonic2.set_bri(10, "all", 1)
             cyberpi.led.on(60, 0, 0)
             time.sleep(0.12)
-        mbuild.ultrasonic2.set_bri(0, 1)
+        mbuild.ultrasonic2.set_bri(0, "all", 1)
         cyberpi.led.off('all')
     except Exception as e:
         print("talk_led err:", e)
@@ -190,7 +190,7 @@ def process(content):
     res = True
     try:
         try:
-            mbuild.ultrasonic2.set_bri(100, 1)
+            mbuild.ultrasonic2.set_bri(100, "all", 1)
         except Exception:
             pass
         # EXEC_ENVを直接使い回す
@@ -201,7 +201,7 @@ def process(content):
         res = False
     finally:
         try:
-            mbuild.ultrasonic2.set_bri(0, 1)
+            mbuild.ultrasonic2.set_bri(0, "all", 1)
         except Exception:
             pass
                 
